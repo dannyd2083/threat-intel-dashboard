@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Send, Bot, User } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface Message {
   id: string
@@ -30,12 +32,14 @@ export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 100)
   }
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, isLoading])
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -51,17 +55,55 @@ export function ChatInterface() {
     setInput("")
     setIsLoading(true)
 
-    // Simulate AI response (backend model not connected yet)
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      const text = await response.text()
+      
+      console.log('[Chat] Received response, length:', text.length)
+      console.log('[Chat] Content preview:', text.substring(0, 100))
+
+      if (!text || text.trim() === '') {
+        throw new Error('Received empty response')
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `I received your message: "${userMessage.content}". The backend model is not connected yet, this is a simulated response. In the future, I will be able to provide real-time threat intelligence analysis and query services.`,
+        content: text,
         timestamp: new Date(),
       }
+      
       setMessages((prev) => [...prev, assistantMessage])
       setIsLoading(false)
-    }, 1000)
+
+    } catch (error) {
+      console.error('[Chat] Send message failed:', error)
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Sorry, AI service is temporarily unavailable. Please check:\n1. OPENAI_API_KEY environment variable is configured\n2. Network connection is stable\n3. API quota is sufficient",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+      setIsLoading(false)
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -72,15 +114,15 @@ export function ChatInterface() {
   }
 
   return (
-    <Card className="w-full h-[600px] flex flex-col">
+    <Card className="w-full h-[1200px] flex flex-col">
       <CardHeader className="border-b">
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-6 w-6 text-primary" />
           Threat Intelligence Chatbot
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 p-0 flex flex-col">
-        <ScrollArea className="flex-1 p-4">
+      <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
+        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -116,9 +158,17 @@ export function ChatInterface() {
                         : "bg-muted"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">
-                      {message.content}
-                    </p>
+                    {message.role === "user" ? (
+                      <p className="text-sm whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                    ) : (
+                      <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {message.timestamp.toLocaleTimeString("en-US", {
