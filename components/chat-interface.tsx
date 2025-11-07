@@ -72,15 +72,15 @@ export function ChatInterface() {
   }
 
   return (
-    <Card className="w-full h-[600px] flex flex-col">
+    <Card className="w-full h-full flex flex-col">
       <CardHeader className="border-b">
         <CardTitle className="flex items-center gap-2">
-          <Bot className="h-6 w-6 text-primary" />
+          <Bot className="h-5 w-5" />
           Threat Intelligence Chatbot
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 p-0 flex flex-col">
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="flex-1 p-4 mb-4">
           <div className="space-y-4">
             {messages.map((message) => (
               <div

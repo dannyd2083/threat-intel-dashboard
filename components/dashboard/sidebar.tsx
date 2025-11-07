@@ -7,7 +7,7 @@ import { VendorFilter } from "./filters/vendor-filter"
 
 export function Sidebar() {
     return (
-        <aside className="w-[280px] min-h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-6">
+        <aside className="w-[280px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col">
             {/* Sidebar Header */}
             <div className="mb-8">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
