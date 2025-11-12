@@ -27,7 +27,7 @@ CREATE TABLE cves (
                       modified_date TIMESTAMP,
                       vendor VARCHAR(255),
                       product VARCHAR(255),
-                      references JSONB,
+                      "references" JSONB,
                       created_at TIMESTAMP DEFAULT NOW()
 );
 
