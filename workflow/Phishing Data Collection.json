@@ -1,0 +1,242 @@
+{
+  "name": "Phishing Data Collection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ffab95f1-a1c4-4010-a6d7-8265ddcacb53",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://urlhaus-api.abuse.ch/v1/urls/recent/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Auth-Key",
+              "value": "ea3a3c19ff144c33e7bd096bdfd0004ffb11f82735822892"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a0a49843-cc70-492c-b876-b11cb8e94aa2",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = [];\n\n\nconst response = $input.all()[0].json;\n\n\nif (response.query_status !== 'ok') {\n  console.log('URLhaus API error:', response);\n  return [];\n}\n\n\nconst urls = response.urls || [];\nfor (let i = 0; i < Math.min(urls.length, 50); i++) {\n  const urlData = urls[i];\n  \n\n  if (urlData.url_status !== 'online') continue;\n  \n\n  let domain = urlData.host || '';\n  if (!domain) continue;\n  \n\n  let target = 'Unknown';\n  const urlLower = (urlData.url || '').toLowerCase();\n  const threat = (urlData.threat || '').toLowerCase();\n  const tags = (urlData.tags || []).join(' ').toLowerCase();\n  \n\n  if (tags.includes('phishing')) {\n    target = 'Phishing';\n  } else if (threat.includes('malware')) {\n    target = 'Malware';\n  } else if (tags.includes('emotet') || tags.includes('trojan')) {\n    target = 'Malware';\n  } else if (urlLower.includes('paypal')) {\n    target = 'PayPal';\n  } else if (urlLower.includes('bank')) {\n    target = 'Banking';\n  } else if (tags.includes('exe') || tags.includes('dll') || tags.includes('zip')) {\n    target = 'Malware Distribution';\n  } else if (threat) {\n    target = threat;\n  }\n  \n\n  let reportedDate = urlData.date_added;\n  if (reportedDate) {\n    // URLhaus 格式: \"2025-11-18 22:48:06 UTC\"\n    reportedDate = reportedDate.replace(' UTC', 'Z').replace(' ', 'T');\n  }\n  \n  items.push({\n    json: {\n      domain: domain,\n      url: (urlData.url || '').substring(0, 500),\n      source: 'URLhaus',\n      status: urlData.url_status || 'unknown',\n      reported_date: reportedDate,\n      verified: true,\n      target: target\n    }\n  });\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "f09a6307-9bc9-4245-a418-2f77884b216a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "phishing_domains",
+          "mode": "list",
+          "cachedResultName": "phishing_domains"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "verified": "={{ $json.verified }}",
+            "domain": "={{ $json.domain }}",
+            "url": "={{ $json.url }}",
+            "source": "={{ $json.source }}",
+            "status": "={{ $json.status }}",
+            "reported_date": "={{ $json.reported_date }}",
+            "target": "={{ $json.target }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reported_date",
+              "displayName": "reported_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "verified",
+              "displayName": "verified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "target",
+              "displayName": "target",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "skipOnConflict": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        576,
+        0
+      ],
+      "id": "d6aa50a9-b6e9-4b3c-b52a-8741b4c098b9",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "kzL0X8VzGOdzYMpN",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e862ba65-1d19-4640-8aa4-99a7876fa30d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "54b240f513e2f39e8a5ed0315d9931fa5638a6b0de455da753db7449e848bcab"
+  },
+  "id": "FyEbU0EYWzqa4VxV",
+  "tags": []
+}

@@ -1,11 +1,15 @@
 "use client"
 
 import { SummaryCards } from "./cards/summary-cards"
-import {CVEsOverTimeChart} from "@/components/dashboard/charts/cves-over-time-chart";
-import {PhishingTrendsChart} from "@/components/dashboard/charts/phishing-trends-chart";
-import {TrendingTopicsCloud} from "@/components/dashboard/charts/treding-topics-cloud";
+import { CVEsOverTimeChart } from "@/components/dashboard/charts/cves-over-time-chart"
+import { PhishingTrendsChart } from "@/components/dashboard/charts/phishing-trends-chart"
+import { TrendingTopicsCloud } from "@/components/dashboard/charts/treding-topics-cloud"
 
-export function DashboardContent() {
+interface DashboardContentProps {
+    days: number
+}
+
+export function DashboardContent({ days }: DashboardContentProps) {
     return (
         <div className="flex-1 pt-6 px-6 pb-0">
             {/* Header */}
@@ -21,12 +25,12 @@ export function DashboardContent() {
             {/* Summary Cards */}
             <SummaryCards />
 
-            {/* Charts Section Placeholder */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 ">
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column: CVE and Phishing Charts */}
                 <div className="lg:col-span-2 space-y-6">
-                    <CVEsOverTimeChart />
-                    <PhishingTrendsChart />
+                    <CVEsOverTimeChart days={days} />
+                    <PhishingTrendsChart days={days} />
                 </div>
 
                 {/* Right Column: Trending Topics */}

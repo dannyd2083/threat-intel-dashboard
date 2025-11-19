@@ -29,11 +29,11 @@
           "parameters": [
             {
               "name": "resultsPerPage",
-              "value": "20"
+              "value": "1000"
             },
             {
               "name": "pubStartDate",
-              "value": "={{ $now.minus({ days: 7 }).startOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+              "value": "={{ $now.minus({ days: 100 }).startOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
             },
             {
               "name": "pubEndDate",
@@ -207,7 +207,9 @@
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
         },
-        "options": {}
+        "options": {
+          "skipOnConflict": true
+        }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -265,7 +267,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "79d9c803-6548-4e39-9802-c2c758131014",
+  "versionId": "66cc5e71-0762-43ad-9374-95f50da1bb21",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "54b240f513e2f39e8a5ed0315d9931fa5638a6b0de455da753db7449e848bcab"
