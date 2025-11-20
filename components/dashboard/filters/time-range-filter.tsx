@@ -1,6 +1,6 @@
 "use client"
 
-import { useState,useEffect } from "react"
+import {useState, useEffect, useRef} from "react"
 
 interface TimeRangeFilterProps {
     onRangeChange: (days: number) => void
@@ -11,6 +11,12 @@ export function TimeRangeFilter({ onRangeChange }: TimeRangeFilterProps) {
     const [customDays, setCustomDays] = useState("")
 
     const timeRanges = ["24 hours", "7 days", "30 days", "Custom"]
+
+    const onRangeChangeRef = useRef(onRangeChange)
+
+    useEffect(() => {
+        onRangeChangeRef.current = onRangeChange
+    }, [onRangeChange])
 
     const convertToDays = (range: string): number => {
         switch (range) {

@@ -18,12 +18,13 @@ export function PhishingTrendsChart({ days }: PhishingTrendsChartProps) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
+        console.log('PhishingTrendsChart useEffect triggered, days:', days)
         async function fetchTimeline() {
             setLoading(true)
             try {
                 const response = await fetch(`/api/phishing/timeline?days=${days}`)
                 const result = await response.json()
-
+                console.log('PhishingTrendsChart fetch result:', result)
                 if (result.success && result.data) {
                     const formattedData = result.data.map((item: any) => ({
                         date: format(new Date(item.date), 'MMM dd'),

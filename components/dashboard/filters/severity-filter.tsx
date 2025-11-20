@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+interface SeverityFilterProps {
+    value: string
+    onChange: (value: string) => void
+}
 
-export function SeverityFilter() {
-    const [severity, setSeverity] = useState("High")
-
-    const severities = ["Critical", "High", "Medium", "Low"]
+export function SeverityFilter({ value, onChange }: SeverityFilterProps) {
+    const severities = ["All", "CRITICAL", "HIGH", "MEDIUM", "LOW"]
 
     return (
         <div>
@@ -13,8 +14,8 @@ export function SeverityFilter() {
                 Severity
             </label>
             <select
-                value={severity}
-                onChange={(e) => setSeverity(e.target.value)}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
                 className="w-full p-2.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             >
                 {severities.map((sev) => (
