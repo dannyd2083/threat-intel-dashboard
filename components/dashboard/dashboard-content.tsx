@@ -1,10 +1,17 @@
 "use client"
 
 import { SummaryCards } from "./cards/summary-cards"
+import { CVEsOverTimeChart } from "@/components/dashboard/charts/cves-over-time-chart"
+import { PhishingTrendsChart } from "@/components/dashboard/charts/phishing-trends-chart"
+import { TrendingTopicsCloud } from "@/components/dashboard/charts/treding-topics-cloud"
 
-export function DashboardContent() {
+interface DashboardContentProps {
+    days: number
+}
+
+export function DashboardContent({ days }: DashboardContentProps) {
     return (
-        <div className="flex-1 p-6">
+        <div className="flex-1 pt-6 px-6 pb-0">
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mb-2">
@@ -18,20 +25,17 @@ export function DashboardContent() {
             {/* Summary Cards */}
             <SummaryCards />
 
-            {/* Charts Section Placeholder */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                {/* Left: Charts placeholder */}
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column: CVE and Phishing Charts */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white dark:bg-slate-900 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 p-12 text-center">
-                        <p className="text-slate-400 text-lg">📈 Charts coming in Phase 3</p>
-                    </div>
+                    <CVEsOverTimeChart days={days} />
+                    <PhishingTrendsChart days={days} />
                 </div>
 
-                {/* Right: Topics placeholder */}
+                {/* Right Column: Trending Topics */}
                 <div className="lg:col-span-1">
-                    <div className="bg-white dark:bg-slate-900 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 p-12 text-center h-full flex items-center justify-center">
-                        <p className="text-slate-400 text-lg">☁️ Topics Cloud coming in Phase 3</p>
-                    </div>
+                    <TrendingTopicsCloud />
                 </div>
             </div>
         </div>

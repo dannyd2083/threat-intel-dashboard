@@ -1,19 +1,53 @@
 "use client"
 
-import { useState } from "react"
+import {useState, useEffect, useRef} from "react"
 
-export function TimeRangeFilter() {
+interface TimeRangeFilterProps {
+    onRangeChange: (days: number) => void
+}
+
+export function TimeRangeFilter({ onRangeChange }: TimeRangeFilterProps) {
     const [timeRange, setTimeRange] = useState("7 days")
     const [customDays, setCustomDays] = useState("")
 
     const timeRanges = ["24 hours", "7 days", "30 days", "Custom"]
 
+    const onRangeChangeRef = useRef(onRangeChange)
+
+    useEffect(() => {
+        onRangeChangeRef.current = onRangeChange
+    }, [onRangeChange])
+
+    const convertToDays = (range: string): number => {
+        switch (range) {
+            case "24 hours":
+                return 1
+            case "7 days":
+                return 7
+            case "30 days":
+                return 30
+            default:
+                return 7
+        }
+    }
+
     const handleTimeRangeChange = (value: string) => {
         setTimeRange(value)
         if (value !== "Custom") {
             setCustomDays("")
+            const days = convertToDays(value)
+            onRangeChange(days)
         }
     }
+
+    useEffect(() => {
+        if (timeRange === "Custom" && customDays) {
+            const days = parseInt(customDays)
+            if (days > 0 && days <= 365) {
+                onRangeChange(days)
+            }
+        }
+    }, [customDays, timeRange, onRangeChange])
     return (
         <div>
             <label className="text-sm font-medium mb-2 block text-slate-700 dark:text-slate-300">

@@ -1,0 +1,277 @@
+{
+  "name": "CVE Data Collection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a102112b-cd82-450c-88f5-d80a3d3e04e6",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://services.nvd.nist.gov/rest/json/cves/2.0",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "resultsPerPage",
+              "value": "1000"
+            },
+            {
+              "name": "pubStartDate",
+              "value": "={{ $now.minus({ days: 100 }).startOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            },
+            {
+              "name": "pubEndDate",
+              "value": "={{ $now.endOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e128f577-5c55-4ce3-8e77-8521d497f231",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (const item of $input.all()) {\n  const vulnerabilities = item.json.vulnerabilities || [];\n  \n  for (const vuln of vulnerabilities) {\n    const cve = vuln.cve;\n    let severity = 'UNKNOWN';\n    let cvssScore = null;\n    \n    if (cve.metrics?.cvssMetricV31?.[0]) {\n      const metric = cve.metrics.cvssMetricV31[0];\n      severity = metric.cvssData.baseSeverity || 'UNKNOWN';\n      cvssScore = metric.cvssData.baseScore;\n    }\n    \n    // 提取描述\n    const description = cve.descriptions?.find(d => d.lang === 'en')?.value || '';\n    \n    // 提取供应商和产品\n    let vendor = null;\n    let product = null;\n    \n    if (cve.configurations?.[0]?.nodes?.[0]?.cpeMatch?.[0]) {\n      const cpe = cve.configurations[0].nodes[0].cpeMatch[0].criteria;\n      const cpeParts = cpe.split(':');\n      if (cpeParts.length >= 5) {\n        vendor = cpeParts[3];\n        product = cpeParts[4];\n      }\n    }\n    \n    items.push({\n      json: {\n        cve_id: cve.id,\n        description: description.substring(0, 1000),\n        severity: severity,\n        cvss_score: cvssScore,\n        published_date: cve.published,\n        modified_date: cve.lastModified,\n        vendor: vendor,\n        product: product,\n        references: cve.references || []\n      }\n    });\n  }\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "bc39b574-3bef-43c2-a4b2-8671aa2845ae",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "cves"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cvss_score": "={{ $json.cvss_score }}",
+            "cve_id": "={{ $json.cve_id }}",
+            "description": "={{ $json.description }}",
+            "severity": "={{ $json.severity }}",
+            "published_date": "={{ $json.published_date }}",
+            "modified_date": "={{ $json.modified_date }}",
+            "vendor": "={{ $json.vendor }}",
+            "product": "={{ $json.vendor }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cve_id",
+              "displayName": "cve_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cvss_score",
+              "displayName": "cvss_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "published_date",
+              "displayName": "published_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "modified_date",
+              "displayName": "modified_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "vendor",
+              "displayName": "vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "product",
+              "displayName": "product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "references",
+              "displayName": "references",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "skipOnConflict": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        592,
+        0
+      ],
+      "id": "ae1cf9b9-90c3-443a-ae04-b7a262842581",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "kzL0X8VzGOdzYMpN",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "66cc5e71-0762-43ad-9374-95f50da1bb21",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "54b240f513e2f39e8a5ed0315d9931fa5638a6b0de455da753db7449e848bcab"
+  },
+  "id": "zZfM7FI98fnGha9C",
+  "tags": []
+}

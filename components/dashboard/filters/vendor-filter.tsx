@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+interface VendorFilterProps {
+    value: string
+    onChange: (value: string) => void
+}
 
-export function VendorFilter() {
-    const [vendor, setVendor] = useState("Microsoft")
-
-    const vendors = ["Microsoft", "Apple", "Google", "Adobe", "Oracle", "Cisco"]
+export function VendorFilter({ value, onChange }: VendorFilterProps) {
+    const vendors = ["All", "Microsoft", "Apple", "Google", "Adobe", "Oracle", "Cisco"]
 
     return (
         <div>
@@ -13,8 +14,8 @@ export function VendorFilter() {
                 Vendor
             </label>
             <select
-                value={vendor}
-                onChange={(e) => setVendor(e.target.value)}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
                 className="w-full p-2.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             >
                 {vendors.map((vnd) => (
