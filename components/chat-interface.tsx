@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Send, Bot, User } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Message {
   id: string
@@ -21,7 +21,7 @@ export const ChatInterface = memo(function ChatInterface() {
     {
       id: "1",
       role: "assistant",
-      content: "Hello! I'm your Threat Intelligence Assistant. I can help you analyze and query threat intelligence information. How may I assist you today?",
+      content: "Hello! I'm your Threat Intelligence Assistant with real-time database access (including CVE vulnerabilities and phishing domain data).\n\nI can help you with:\n- Query specific CVE vulnerability details\n- Analyze recent security threat trends\n- Provide targeted security recommendations\n- Retrieve phishing domain information\n\nI will clearly mark [DATABASE FACT] and [SECURITY ANALYSIS] to ensure information source transparency. How can I help you today?",
       timestamp: new Date(),
     },
   ])
@@ -30,14 +30,12 @@ export const ChatInterface = memo(function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-    }, 100)
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, isLoading])
+  }, [messages])
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -53,27 +51,47 @@ export const ChatInterface = memo(function ChatInterface() {
     setInput("")
     setIsLoading(true)
 
-    setTimeout(() => {
+    try {
+      const messageHistory = [...messages, userMessage].map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messages: messageHistory }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || `HTTP ${response.status}`)
+      }
+
+      const assistantContent = await response.text()
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: text,
+        content: assistantContent,
         timestamp: new Date(),
       }
-      
-      setMessages((prev) => [...prev, assistantMessage])
-      setIsLoading(false)
 
+      setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
-      console.error('[Chat] Send message failed:', error)
+      console.error('Chat API error:', error)
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "Sorry, AI service is temporarily unavailable. Please check:\n1. OPENAI_API_KEY environment variable is configured\n2. Network connection is stable\n3. API quota is sufficient",
+        content: `Sorry, the service is temporarily unavailable. Error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again later.`,
         timestamp: new Date(),
       }
+      
       setMessages((prev) => [...prev, errorMessage])
+    } finally {
       setIsLoading(false)
     }
   }
@@ -86,17 +104,19 @@ export const ChatInterface = memo(function ChatInterface() {
   }
 
   return (
-      <Card className="w-full h-full flex flex-col">
-        <CardHeader className="border-b">
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5" />
-            Threat Intelligence Chatbot
+      <Card className="w-full h-full flex flex-col shadow-lg">
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800">
+          <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-slate-100">
+            <Bot className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            Threat Intelligence AI Assistant
           </CardTitle>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            Powered by RAG technology, providing accurate threat intelligence analysis with real-time database retrieval
+          </p>
         </CardHeader>
         <CardContent className="flex-1 p-0 flex flex-col">
-          {/* ✅ 也可以暂时把 ScrollArea 替换成普通 div */}
-          <div className="flex-1 p-4 mb-4 overflow-auto">
-            <div className="space-y-4">
+          <div className="flex-1 p-6 mb-4 overflow-auto bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-900/50">
+            <div className="space-y-4 max-w-4xl mx-auto">
               {messages.map((message) => (
                   <div
                       key={message.id}
@@ -120,20 +140,39 @@ export const ChatInterface = memo(function ChatInterface() {
                       </AvatarFallback>
                     </Avatar>
                     <div
-                        className={`flex flex-col gap-1 max-w-[80%] ${
+                        className={`flex flex-col gap-1 max-w-[85%] ${
                             message.role === "user" ? "items-end" : "items-start"
                         }`}
                     >
                       <div
-                          className={`rounded-lg px-4 py-2 ${
+                          className={`rounded-lg px-4 py-3 shadow-sm ${
                               message.role === "user"
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted"
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                           }`}
                       >
-                        <p className="text-sm whitespace-pre-wrap">
-                          {message.content}
-                        </p>
+                        {message.role === "user" ? (
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                            {message.content}
+                          </p>
+                        ) : (
+                          <div className={`text-sm leading-relaxed prose prose-sm max-w-none dark:prose-invert
+                            prose-headings:font-bold prose-headings:text-slate-900 dark:prose-headings:text-slate-100
+                            prose-p:text-slate-800 dark:prose-p:text-slate-200
+                            prose-strong:text-slate-900 dark:prose-strong:text-slate-100
+                            prose-ul:text-slate-800 dark:prose-ul:text-slate-200
+                            prose-ol:text-slate-800 dark:prose-ol:text-slate-200
+                            prose-li:text-slate-800 dark:prose-li:text-slate-200
+                            prose-code:text-blue-600 dark:prose-code:text-blue-400
+                            prose-code:bg-slate-100 dark:prose-code:bg-slate-800
+                            prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                            prose-pre:bg-slate-100 dark:prose-pre:bg-slate-800
+                            prose-a:text-blue-600 dark:prose-a:text-blue-400`}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
+                        )}
                       </div>
                       <span className="text-xs text-muted-foreground">
                     {message.timestamp.toLocaleTimeString("en-US", {
@@ -163,22 +202,23 @@ export const ChatInterface = memo(function ChatInterface() {
               <div ref={messagesEndRef} />
             </div>
           </div>
-          <div className="p-4 border-t">
-            <div className="flex gap-2">
+          <div className="p-6 border-t bg-white dark:bg-slate-900">
+            <div className="flex gap-3 max-w-4xl mx-auto">
               <Input
-                  placeholder="Type your question..."
+                  placeholder="Type your question, e.g.: What are the recent critical Microsoft vulnerabilities?"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   disabled={isLoading}
-                  className="flex-1"
+                  className="flex-1 h-12 text-base"
               />
               <Button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
                   size="icon"
+                  className="h-12 w-12"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" />
               </Button>
             </div>
           </div>
@@ -186,4 +226,3 @@ export const ChatInterface = memo(function ChatInterface() {
       </Card>
   )
 })
-

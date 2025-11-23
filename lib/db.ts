@@ -1,17 +1,16 @@
 import { Pool } from 'pg';
 
 const pool = new Pool({
-    host: 'localhost',
-    port: 5432,
-    database: 'threat_intelligence',
-    user: 'postgres',
-    password: '123456',
+    host: process.env.POSTGRES_HOST,
+    port: Number(process.env.POSTGRES_PORT),
+    database: process.env.POSTGRES_DB,
+    user: process.env.POSTGRES_USER,
+    password: process.env.POSTGRES_PASSWORD,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
 });
 
-// 测试连接
 pool.on('connect', () => {
     console.log('Connected to PostgreSQL database');
 });

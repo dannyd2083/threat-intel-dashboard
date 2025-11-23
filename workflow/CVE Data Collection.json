@@ -18,7 +18,7 @@
         0,
         0
       ],
-      "id": "a102112b-cd82-450c-88f5-d80a3d3e04e6",
+      "id": "3849884f-1011-40a3-adf6-5c41f8e2e62b",
       "name": "Schedule Trigger"
     },
     {
@@ -33,7 +33,7 @@
             },
             {
               "name": "pubStartDate",
-              "value": "={{ $now.minus({ days: 100 }).startOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+              "value": "={{ $json.last_date }}"
             },
             {
               "name": "pubEndDate",
@@ -46,10 +46,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        208,
+        416,
         0
       ],
-      "id": "e128f577-5c55-4ce3-8e77-8521d497f231",
+      "id": "56e26fbe-8167-4363-9f6e-732188236e67",
       "name": "HTTP Request"
     },
     {
@@ -59,10 +59,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        416,
+        624,
         0
       ],
-      "id": "bc39b574-3bef-43c2-a4b2-8671aa2845ae",
+      "id": "07a5ee6d-aef0-4e78-93f9-ab2d2f5fdbfb",
       "name": "Code in JavaScript"
     },
     {
@@ -214,14 +214,35 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        592,
+        800,
         0
       ],
-      "id": "ae1cf9b9-90c3-443a-ae04-b7a262842581",
+      "id": "bc52fa56-cfba-435b-977c-046f69a8ce2a",
       "name": "Insert rows in a table",
       "credentials": {
         "postgres": {
-          "id": "kzL0X8VzGOdzYMpN",
+          "id": "j8oobd041RKsjaVh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(MAX(published_date), NOW() - INTERVAL '100 days') as last_date FROM cves",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "4a20016b-f1ab-45ca-9241-4976aa292b7a",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "j8oobd041RKsjaVh",
           "name": "Postgres account"
         }
       }
@@ -233,7 +254,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Execute a SQL query",
             "type": "main",
             "index": 0
           }
@@ -261,17 +282,28 @@
           }
         ]
       ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "66cc5e71-0762-43ad-9374-95f50da1bb21",
+  "versionId": "b31b0173-58ca-47e0-9455-81534e36cd20",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "54b240f513e2f39e8a5ed0315d9931fa5638a6b0de455da753db7449e848bcab"
+    "instanceId": "a3c7ab43e2e4007168874c1b8813a0a6eabf67bbe566e1e6609e2c1141a75864"
   },
-  "id": "zZfM7FI98fnGha9C",
+  "id": "vadn5xPUunQepmll",
   "tags": []
 }

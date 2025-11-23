@@ -12,6 +12,8 @@ function filtersReducer(state: FilterState, action: Partial<FilterState>): Filte
 }
 
 export function DashboardWrapper() {
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'chatbot'>('dashboard')
+    
     const [filters, dispatch] = useReducer(filtersReducer, {
         source: 'All',
         days: 7,
@@ -71,30 +73,37 @@ export function DashboardWrapper() {
 
     return (
         <>
-            <div className="flex items-stretch">
+            <div className="flex items-stretch min-h-screen">
                 <Sidebar
                     filters={filters}
                     onFiltersChange={dispatch}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
                 />
-                <DashboardContent days={filters.days} />
-            </div>
-
-            <div className="px-6 py-8 bg-slate-50 dark:bg-slate-900/50">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[500px]">
-                    <div className="h-full">
-                        <DataTable
-                            data={tableData}
-                            loading={loading}
-                            page={page}
-                            totalPages={totalPages}
-                            totalCount={totalCount}
-                            onPageChange={setPage}
-                        />
+                
+                {activeTab === 'dashboard' ? (
+                    <div className="flex-1 flex flex-col">
+                        <DashboardContent days={filters.days} />
+                        
+                        {/* Filtered Results - Full Width */}
+                        <div className="px-6 py-8 bg-slate-50 dark:bg-slate-900/50">
+                            <DataTable
+                                data={tableData}
+                                loading={loading}
+                                page={page}
+                                totalPages={totalPages}
+                                totalCount={totalCount}
+                                onPageChange={setPage}
+                            />
+                        </div>
                     </div>
-                    <div className="h-full">
-                        <ChatInterface />
+                ) : (
+                    <div className="flex-1 p-6 bg-slate-50 dark:bg-slate-900/50">
+                        <div className="h-full max-w-6xl mx-auto">
+                            <ChatInterface />
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </>
     )
