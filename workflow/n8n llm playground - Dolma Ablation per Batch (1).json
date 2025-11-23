@@ -1,0 +1,676 @@
+{
+  "name": "n8n llm playground - Dolma Ablation per Batch",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "94f3a906-0168-4cdf-88d1-617fddb1bd61",
+      "name": "When clicking ‘Execute workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1008,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://services.nvd.nist.gov/rest/json/cves/2.0",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "resultsPerPage",
+              "value": "100"
+            },
+            {
+              "name": "pubStartDate",
+              "value": "={{ $now.minus({ days: 100 }).startOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            },
+            {
+              "name": "pubEndDate",
+              "value": "={{ $now.endOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5d389ed6-c72b-47c9-a9c5-75fcb11be88f",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -800,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (const item of $input.all()) {\n  const vulnerabilities = item.json.vulnerabilities || [];\n\n  for (const vuln of vulnerabilities) {\n    const cve = vuln.cve;\n    let severity = 'UNKNOWN';\n    let cvssScore = null;\n\n    if (cve.metrics?.cvssMetricV31?.[0]) {\n      const metric = cve.metrics.cvssMetricV31[0];\n      severity = metric.cvssData.baseSeverity || 'UNKNOWN';\n      cvssScore = metric.cvssData.baseScore;\n    }\n\n    const description = cve.descriptions?.find(d => d.lang === 'en')?.value || '';\n\n    let vendor = null;\n    let product = null;\n\n    if (cve.configurations?.[0]?.nodes?.[0]?.cpeMatch?.[0]) {\n      const cpe = cve.configurations[0].nodes[0].cpeMatch[0].criteria;\n      const cpeParts = cpe.split(':');\n      if (cpeParts.length >= 5) {\n        vendor = cpeParts[3];\n        product = cpeParts[4];\n      }\n    }\n\n    items.push({\n      json: {\n        cve_id: cve.id,\n        description: description.substring(0, 1000),\n        severity: severity,\n        cvss_score: cvssScore,\n        vendor: vendor,\n        product: product\n      }\n    });\n  }\n}\n\nreturn items;\n"
+      },
+      "id": "c59e5509-19a2-4300-a311-28e151531953",
+      "name": "Code Flatten CVEs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "2eb4961b-ce19-40b3-86ca-9f72c3c97689",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -400,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items;"
+      },
+      "id": "f3986e32-9f0f-4640-b364-660c17246feb",
+      "name": "Batch Entry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\nreturn items;"
+      },
+      "id": "a57a3a2d-6523-4747-afbb-ad3c8af6673f",
+      "name": "Branch A - Baseline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cves = $input.all().map(item => item.json);\nreturn [{ json: { batch_cves: cves } }];"
+      },
+      "id": "ba5b7194-84fe-47df-b706-ba6a1eac4935",
+      "name": "Agg A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-5-NANO"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "You are a security assistant. Given the CVEs below, return a JSON object with:\n\n- risk_score: a number between 0 and 1 measuring overall risk of this set\n- selected_cve_ids: an array of up to 5 CVE IDs that you consider the most critical\n\nRespond ONLY with valid JSON, like:\n\n{\n  \"risk_score\": 0.83,\n  \"selected_cve_ids\": [\"CVE-2025-8932\", \"CVE-2025-55198\"]\n}\n\nHere are the CVEs from this pipeline (this batch):\n\n{{ JSON.stringify($json.batch_cves, null, 2) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "912d9d10-d75c-4af1-a25a-2fd3b3aeb262",
+      "name": "Message a model A",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        576,
+        0
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "IdTUulTpJRHV17dd",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const variant = \"A_baseline\";\n\nconst text = $json.output[0].content[0].text;\nconst parsed = JSON.parse(text || \"{}\");\n\nconst allCves = $node[\"Agg A\"].json.batch_cves || [];\nconst selectedIds = parsed.selected_cve_ids || [];\nconst selected = allCves.filter(cve => selectedIds.includes(cve.cve_id));\n\nlet avgCvss = null;\nif (selected.length > 0) {\n  const sum = selected.reduce((acc, c) => acc + (c.cvss_score || 0), 0);\n  avgCvss = sum / selected.length;\n}\n\nconst riskyRegex = /(rce|remote code execution|sql injection|unauthenticated|pre-auth)/i;\nlet numHelm = 0;\nlet numRce = 0;\n\nfor (const cve of selected) {\n  const desc = cve.description || \"\";\n  const prod = ((cve.product || \"\") + \" \" + (cve.vendor || \"\")).toLowerCase();\n  if (prod.includes(\"helm\") || desc.toLowerCase().includes(\"helm\")) numHelm++;\n  if (riskyRegex.test(desc)) numRce++;\n}\n\nreturn [{\n  json: {\n    pipeline_variant: variant,\n    risk_score: parsed.risk_score ?? null,\n    avg_cvss_selected: avgCvss,\n    num_selected: selected.length,\n    num_helm: numHelm,\n    num_rce: numRce\n  }\n}];\n"
+      },
+      "id": "b866af40-8593-46bf-9205-76fbbb318897",
+      "name": "Metrics A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\nitems = items.filter(i => i.json.cvss_score != null);\nitems = items.filter(i => (i.json.description || \"\").length >= 80);\nitems = items.filter(i => {\n  const sev = (i.json.severity || \"\").toUpperCase();\n  return [\"MEDIUM\", \"HIGH\", \"CRITICAL\"].includes(sev);\n});\n\nreturn items;\n"
+      },
+      "id": "6c740eb8-c71c-4959-bd0a-26c5bda788ec",
+      "name": "Branch B - Quality",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cves = $input.all().map(item => item.json);\nreturn [{ json: { batch_cves: cves } }];"
+      },
+      "id": "4f524ed5-1a7b-430e-8739-c6848fb9bf90",
+      "name": "Agg B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-5-NANO"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "You are a security assistant. Given the CVEs below, return a JSON object with:\n\n- risk_score: a number between 0 and 1 measuring overall risk of this set\n- selected_cve_ids: an array of up to 5 CVE IDs that you consider the most critical\n\nRespond ONLY with valid JSON, like:\n\n{\n  \"risk_score\": 0.83,\n  \"selected_cve_ids\": [\"CVE-2025-8932\", \"CVE-2025-55198\"]\n}\n\nHere are the CVEs from this pipeline (this batch):\n\n{{ JSON.stringify($json.batch_cves, null, 2) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "d13d6182-24bd-4683-a911-4fb08d56d562",
+      "name": "Message a model B",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        576,
+        160
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "IdTUulTpJRHV17dd",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const variant = \"B_quality\";\n\nconst text = $json.output[0].content[0].text;\nconst parsed = JSON.parse(text || \"{}\");\n\nconst allCves = $node[\"Agg B\"].json.batch_cves || [];\nconst selectedIds = parsed.selected_cve_ids || [];\nconst selected = allCves.filter(cve => selectedIds.includes(cve.cve_id));\n\nlet avgCvss = null;\nif (selected.length > 0) {\n  const sum = selected.reduce((acc, c) => acc + (c.cvss_score || 0), 0);\n  avgCvss = sum / selected.length;\n}\n\nconst riskyRegex = /(rce|remote code execution|sql injection|unauthenticated|pre-auth)/i;\nlet numHelm = 0;\nlet numRce = 0;\n\nfor (const cve of selected) {\n  const desc = cve.description || \"\";\n  const prod = ((cve.product || \"\") + \" \" + (cve.vendor || \"\")).toLowerCase();\n  if (prod.includes(\"helm\") || desc.toLowerCase().includes(\"helm\")) numHelm++;\n  if (riskyRegex.test(desc)) numRce++;\n}\n\nreturn [{\n  json: {\n    pipeline_variant: variant,\n    risk_score: parsed.risk_score ?? null,\n    avg_cvss_selected: avgCvss,\n    num_selected: selected.length,\n    num_helm: numHelm,\n    num_rce: numRce\n  }\n}];\n"
+      },
+      "id": "4f58939c-f2be-4adb-8435-432fbf3195c3",
+      "name": "Metrics B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\nitems = items.filter(i => i.json.cvss_score != null);\nitems = items.filter(i => (i.json.description || \"\").length >= 80);\nitems = items.filter(i => {\n  const sev = (i.json.severity || \"\").toUpperCase();\n  return [\"MEDIUM\", \"HIGH\", \"CRITICAL\"].includes(sev);\n});\n\nconst riskyRegex = /(rce|remote code execution|sql injection|unauthenticated|pre-auth)/i;\nitems = items.filter(i => riskyRegex.test(i.json.description || \"\"));\n\nreturn items;\n"
+      },
+      "id": "dcec1aa1-b9cc-48ea-aead-47019c6d6d2b",
+      "name": "Branch C - Quality+Risky",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cves = $input.all().map(item => item.json);\nreturn [{ json: { batch_cves: cves } }];"
+      },
+      "id": "75a08bae-0d54-4ee7-a027-195e1b4e9ab9",
+      "name": "Agg C",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-5-NANO"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "You are a security assistant. Given the CVEs below, return a JSON object with:\n\n- risk_score: a number between 0 and 1 measuring overall risk of this set\n- selected_cve_ids: an array of up to 5 CVE IDs that you consider the most critical\n\nRespond ONLY with valid JSON, like:\n\n{\n  \"risk_score\": 0.83,\n  \"selected_cve_ids\": [\"CVE-2025-8932\", \"CVE-2025-55198\"]\n}\n\nHere are the CVEs from this pipeline (this batch):\n\n{{ JSON.stringify($json.batch_cves, null, 2) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "1d69abe3-d139-4bb9-a7f9-8de721ee4d78",
+      "name": "Message a model C",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        576,
+        304
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "IdTUulTpJRHV17dd",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const variant = \"C_quality_risky\";\n\nconst text = $json.output[0].content[0].text;\nconst parsed = JSON.parse(text || \"{}\");\n\nconst allCves = $node[\"Agg C\"].json.batch_cves || [];\nconst selectedIds = parsed.selected_cve_ids || [];\nconst selected = allCves.filter(cve => selectedIds.includes(cve.cve_id));\n\nlet avgCvss = null;\nif (selected.length > 0) {\n  const sum = selected.reduce((acc, c) => acc + (c.cvss_score || 0), 0);\n  avgCvss = sum / selected.length;\n}\n\nconst riskyRegex = /(rce|remote code execution|sql injection|unauthenticated|pre-auth)/i;\nlet numHelm = 0;\nlet numRce = 0;\n\nfor (const cve of selected) {\n  const desc = cve.description || \"\";\n  const prod = ((cve.product || \"\") + \" \" + (cve.vendor || \"\")).toLowerCase();\n  if (prod.includes(\"helm\") || desc.toLowerCase().includes(\"helm\")) numHelm++;\n  if (riskyRegex.test(desc)) numRce++;\n}\n\nreturn [{\n  json: {\n    pipeline_variant: variant,\n    risk_score: parsed.risk_score ?? null,\n    avg_cvss_selected: avgCvss,\n    num_selected: selected.length,\n    num_helm: numHelm,\n    num_rce: numRce\n  }\n}];\n"
+      },
+      "id": "04454c84-1bbe-4f94-bbaf-a537c34f6828",
+      "name": "Metrics C",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\nitems = items.filter(i => i.json.cvss_score != null);\nitems = items.filter(i => (i.json.description || \"\").length >= 80);\nitems = items.filter(i => {\n  const sev = (i.json.severity || \"\").toUpperCase();\n  return [\"MEDIUM\", \"HIGH\", \"CRITICAL\"].includes(sev);\n});\n\nconst riskyRegex = /(rce|remote code execution|sql injection|unauthenticated|pre-auth)/i;\nitems = items.filter(i => riskyRegex.test(i.json.description || \"\"));\n\nconst seen = new Set();\nitems = items.filter(i => {\n  const id = i.json.cve_id;\n  if (seen.has(id)) return false;\n  seen.add(id);\n  return true;\n});\n\nreturn items;\n"
+      },
+      "id": "ddff569c-3b30-4f89-92b8-5bf57882ff2d",
+      "name": "Branch D - Quality+Risky+Dedup",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cves = $input.all().map(item => item.json);\nreturn [{ json: { batch_cves: cves } }];"
+      },
+      "id": "a3c0ad47-b598-453f-9985-5e3692182140",
+      "name": "Agg D",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-5-NANO"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "You are a security assistant. Given the CVEs below, return a JSON object with:\n\n- risk_score: a number between 0 and 1 measuring overall risk of this set\n- selected_cve_ids: an array of up to 5 CVE IDs that you consider the most critical\n\nRespond ONLY with valid JSON, like:\n\n{\n  \"risk_score\": 0.83,\n  \"selected_cve_ids\": [\"CVE-2025-8932\", \"CVE-2025-55198\"]\n}\n\nHere are the CVEs from this pipeline (this batch):\n\n{{ JSON.stringify($json.batch_cves, null, 2) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "9146743f-8a45-4e7f-8501-787d37551c47",
+      "name": "Message a model D",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        576,
+        464
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "IdTUulTpJRHV17dd",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const variant = \"D_quality_risky_dedup\";\n\nconst text = $json.output[0].content[0].text;\nconst parsed = JSON.parse(text || \"{}\");\n\nconst allCves = $node[\"Agg D\"].json.batch_cves || [];\nconst selectedIds = parsed.selected_cve_ids || [];\nconst selected = allCves.filter(cve => selectedIds.includes(cve.cve_id));\n\nlet avgCvss = null;\nif (selected.length > 0) {\n  const sum = selected.reduce((acc, c) => acc + (c.cvss_score || 0), 0);\n  avgCvss = sum / selected.length;\n}\n\nconst riskyRegex = /(rce|remote code execution|sql injection|unauthenticated|pre-auth)/i;\nlet numHelm = 0;\nlet numRce = 0;\n\nfor (const cve of selected) {\n  const desc = cve.description || \"\";\n  const prod = ((cve.product || \"\") + \" \" + (cve.vendor || \"\")).toLowerCase();\n  if (prod.includes(\"helm\") || desc.toLowerCase().includes(\"helm\")) numHelm++;\n  if (riskyRegex.test(desc)) numRce++;\n}\n\nreturn [{\n  json: {\n    pipeline_variant: variant,\n    risk_score: parsed.risk_score ?? null,\n    avg_cvss_selected: avgCvss,\n    num_selected: selected.length,\n    num_helm: numHelm,\n    num_rce: numRce\n  }\n}];\n"
+      },
+      "id": "4c710d13-0996-45c9-a788-fbba150b11de",
+      "name": "Metrics D",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items;"
+      },
+      "id": "ab58271b-db5e-4372-bc46-47d825a7ecf9",
+      "name": "Combine Metrics (Batch)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect metrics from each variant across all batches\nconst allA = $items(\"Metrics A\").map(i => i.json);\nconst allB = $items(\"Metrics B\").map(i => i.json);\nconst allC = $items(\"Metrics C\").map(i => i.json);\nconst allD = $items(\"Metrics D\").map(i => i.json);\n\n// How many batches did we process?\n// (one item per batch per variant)\nconst numBatches = Math.max(\n  allA.length,\n  allB.length,\n  allC.length,\n  allD.length\n);\n\n// Flatten into one big table of rows\nconst allRows = [\n  ...allA,\n  ...allB,\n  ...allC,\n  ...allD,\n];\n\nreturn [\n  {\n    json: {\n      total_batches: numBatches,\n      rows: allRows,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        0
+      ],
+      "id": "70bc8522-f0f0-4445-b3a5-c64bdff33810",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code Flatten CVEs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Flatten CVEs": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Batch Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Entry": {
+      "main": [
+        [
+          {
+            "node": "Branch A - Baseline",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Branch B - Quality",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Branch C - Quality+Risky",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Branch D - Quality+Risky+Dedup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch A - Baseline": {
+      "main": [
+        [
+          {
+            "node": "Agg A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg A": {
+      "main": [
+        [
+          {
+            "node": "Message a model A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch B - Quality": {
+      "main": [
+        [
+          {
+            "node": "Agg B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg B": {
+      "main": [
+        [
+          {
+            "node": "Message a model B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch C - Quality+Risky": {
+      "main": [
+        [
+          {
+            "node": "Agg C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg C": {
+      "main": [
+        [
+          {
+            "node": "Message a model C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch D - Quality+Risky+Dedup": {
+      "main": [
+        [
+          {
+            "node": "Agg D",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agg D": {
+      "main": [
+        [
+          {
+            "node": "Message a model D",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metrics A": {
+      "main": [
+        [
+          {
+            "node": "Combine Metrics (Batch)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metrics B": {
+      "main": [
+        [
+          {
+            "node": "Combine Metrics (Batch)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metrics C": {
+      "main": [
+        [
+          {
+            "node": "Combine Metrics (Batch)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metrics D": {
+      "main": [
+        [
+          {
+            "node": "Combine Metrics (Batch)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Metrics (Batch)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model A": {
+      "main": [
+        [
+          {
+            "node": "Metrics A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model B": {
+      "main": [
+        [
+          {
+            "node": "Metrics B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model D": {
+      "main": [
+        [
+          {
+            "node": "Metrics D",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model C": {
+      "main": [
+        [
+          {
+            "node": "Metrics C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0e9f7bec-1202-489e-9d20-296c76e1c2a7",
+  "meta": {
+    "instanceId": "68a0e16da835581a6980baa51708142c0cb450d4cf2bd1f7df5320c65d90743c"
+  },
+  "id": "JAILVAi26cCeE5Sd",
+  "tags": []
+}
