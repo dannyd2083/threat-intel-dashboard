@@ -43,7 +43,7 @@ export function TimeRangeFilter({ onRangeChange }: TimeRangeFilterProps) {
     useEffect(() => {
         if (timeRange === "Custom" && customDays) {
             const days = parseInt(customDays)
-            if (days > 0 && days <= 365) {
+            if (days > 0 && days <= 1825) {
                 onRangeChange(days)
             }
         }
@@ -67,19 +67,24 @@ export function TimeRangeFilter({ onRangeChange }: TimeRangeFilterProps) {
             </select>
 
             {timeRange === "Custom" && (
-                <div className="mt-3 flex items-center gap-2">
-                    <input
-                        type="number"
-                        min="1"
-                        max="365"
-                        placeholder="Enter days"
-                        value={customDays}
-                        onChange={(e) => setCustomDays(e.target.value)}
-                        className="flex-1 p-2.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    />
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
-            days
-          </span>
+                <div className="mt-3">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="number"
+                            min="1"
+                            max="1825"
+                            placeholder="Enter days"
+                            value={customDays}
+                            onChange={(e) => setCustomDays(e.target.value)}
+                            className="flex-1 p-2.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        />
+                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                days
+              </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Max: 1825 days (5 years)
+                    </p>
                 </div>
             )}
 

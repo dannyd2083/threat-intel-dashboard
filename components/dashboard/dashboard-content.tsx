@@ -35,7 +35,7 @@ export function DashboardContent({ days }: DashboardContentProps) {
 
                 {/* Right Column: Trending Topics */}
                 <div className="lg:col-span-1">
-                    <TrendingTopicsCloud />
+                    <TrendingTopicsCloud days={days} />
                 </div>
             </div>
         </div>

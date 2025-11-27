@@ -1,0 +1,265 @@
+{
+  "name": "Hacker News Data Collection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "hn-schedule-trigger",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://hn.algolia.com/api/v1/search_by_date",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "security"
+            },
+            {
+              "name": "tags",
+              "value": "story"
+            },
+            {
+              "name": "hitsPerPage",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "hn-http-request",
+      "name": "Fetch HN Stories"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform Hacker News API response to database format\nconst items = [];\n\n// Get the response from previous node\nconst inputData = $input.all()[0].json;\n\n// Debug: log the structure\nconsole.log('Input data keys:', Object.keys(inputData));\n\n// Check if hits exist\nif (!inputData.hits) {\n  console.log('No hits found in response');\n  return [];\n}\n\nconst stories = inputData.hits;\nconsole.log(`Found ${stories.length} stories to process`);\n\n// Calculate cutoff timestamp (30 days ago)\nconst cutoffTime = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);\nconsole.log(`Filtering stories newer than ${new Date(cutoffTime * 1000).toISOString()}`);\n\nlet filteredCount = 0;\n\n// Process each story\nfor (let i = 0; i < stories.length; i++) {\n  const story = stories[i];\n  \n  // Skip if missing required fields\n  if (!story.objectID || !story.title) {\n    console.log(`Skipping story ${i}: missing objectID or title`);\n    continue;\n  }\n  \n  // Filter out stories older than 30 days\n  if (story.created_at_i && story.created_at_i < cutoffTime) {\n    continue;\n  }\n  \n  filteredCount++;\n  \n  // Convert Unix timestamp to ISO string\n  let createdAt = null;\n  if (story.created_at_i) {\n    createdAt = new Date(story.created_at_i * 1000).toISOString();\n  } else if (story.created_at) {\n    createdAt = new Date(story.created_at).toISOString();\n  } else {\n    createdAt = new Date().toISOString(); // fallback to now\n  }\n  \n  // Create output item\n  items.push({\n    json: {\n      hn_id: String(story.objectID),\n      title: String(story.title).substring(0, 500),\n      url: story.url || null,\n      author: story.author || 'unknown',\n      points: parseInt(story.points) || 0,\n      num_comments: parseInt(story.num_comments) || 0,\n      tags: Array.isArray(story._tags) ? story._tags : [],\n      created_at_hn: createdAt\n    }\n  });\n}\n\nconsole.log(`Filtered to ${filteredCount} stories from last 30 days out of ${stories.length} total`);\nconsole.log(`Successfully processed ${items.length} Hacker News stories`);\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "hn-code-transform",
+      "name": "Transform HN Data"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "hacker_news_trends"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "hn_id": "={{ $json.hn_id }}",
+            "title": "={{ $json.title }}",
+            "url": "={{ $json.url }}",
+            "author": "={{ $json.author }}",
+            "points": "={{ $json.points }}",
+            "num_comments": "={{ $json.num_comments }}",
+            "tags": "={{ $json.tags }}",
+            "created_at_hn": "={{ $json.created_at_hn }}"
+          },
+          "matchingColumns": [
+            "hn_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "hn_id",
+              "displayName": "hn_id",
+              "required": true,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "author",
+              "displayName": "author",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "points",
+              "displayName": "points",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "num_comments",
+              "displayName": "num_comments",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tags",
+              "displayName": "tags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "array",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at_hn",
+              "displayName": "created_at_hn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fetched_at",
+              "displayName": "fetched_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ]
+        },
+        "options": {
+          "skipOnConflict": false
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        624,
+        0
+      ],
+      "id": "hn-postgres-insert",
+      "name": "Insert into Database",
+      "credentials": {
+        "postgres": {
+          "id": "j8oobd041RKsjaVh",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch HN Stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch HN Stories": {
+      "main": [
+        [
+          {
+            "node": "Transform HN Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform HN Data": {
+      "main": [
+        [
+          {
+            "node": "Insert into Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "hn-workflow-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a3c7ab43e2e4007168874c1b8813a0a6eabf67bbe566e1e6609e2c1141a75864"
+  },
+  "id": "hnDataCollection",
+  "tags": []
+}

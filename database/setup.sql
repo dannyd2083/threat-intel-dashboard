@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS topic_embeddings CASCADE;
 DROP TABLE IF EXISTS data_refresh_log CASCADE;
 DROP TABLE IF EXISTS daily_stats CASCADE;
 DROP TABLE IF EXISTS twitter_topics CASCADE;
+DROP TABLE IF EXISTS hacker_news_trends CASCADE;
 DROP TABLE IF EXISTS phishing_domains CASCADE;
 DROP TABLE IF EXISTS cves CASCADE;
 
@@ -54,23 +55,25 @@ CREATE INDEX idx_phishing_reported ON phishing_domains(reported_date DESC);
 CREATE INDEX idx_phishing_status ON phishing_domains(status);
 
 -- ================================================
--- 3. Twitter Topics Table
+-- 3. Hacker News Trends Table
 -- ================================================
-CREATE TABLE twitter_topics (
-                                id SERIAL PRIMARY KEY,
-                                hashtag VARCHAR(100) NOT NULL,
-                                tweet_text TEXT,
-                                tweet_id VARCHAR(50) UNIQUE,
-                                author VARCHAR(100),
-                                likes_count INTEGER DEFAULT 0,
-                                retweets_count INTEGER DEFAULT 0,
-                                posted_at TIMESTAMP,
-                                category VARCHAR(50),
-                                created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE hacker_news_trends (
+    id SERIAL PRIMARY KEY,
+    hn_id VARCHAR(50) UNIQUE NOT NULL,     -- Hacker News story ID (objectID from Algolia API)
+    title TEXT NOT NULL,                    -- Story title
+    url TEXT,                               -- Story URL (can be null for Ask HN posts)
+    author VARCHAR(255),                    -- Story author username
+    points INTEGER DEFAULT 0,               -- Story points/votes
+    num_comments INTEGER DEFAULT 0,         -- Number of comments
+    tags TEXT[],                            -- Story tags from HN (e.g., story, show_hn, ask_hn)
+    created_at_hn TIMESTAMP,               -- When the story was posted on Hacker News
+    fetched_at TIMESTAMP DEFAULT NOW()     -- When our system fetched this story
 );
 
-CREATE INDEX idx_twitter_hashtag ON twitter_topics(hashtag);
-CREATE INDEX idx_twitter_posted ON twitter_topics(posted_at DESC);
+CREATE INDEX idx_hn_created ON hacker_news_trends(created_at_hn DESC);
+CREATE INDEX idx_hn_points ON hacker_news_trends(points DESC);
+CREATE INDEX idx_hn_fetched ON hacker_news_trends(fetched_at DESC);
+CREATE INDEX idx_hn_id ON hacker_news_trends(hn_id);
 
 -- ================================================
 -- 4. Data Refresh Log Table
@@ -92,6 +95,6 @@ SELECT
     'Tables created successfully!' as message,
     (SELECT COUNT(*) FROM cves) as cves_count,
     (SELECT COUNT(*) FROM phishing_domains) as phishing_count,
-    (SELECT COUNT(*) FROM twitter_topics) as twitter_count;
+    (SELECT COUNT(*) FROM hacker_news_trends) as hn_stories_count;
 
 \dt
