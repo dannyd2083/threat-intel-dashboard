@@ -50,8 +50,8 @@ export function SummaryCards() {
 
     if (loading) {
         return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {[1, 2, 3].map((i) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 mb-8 max-w-7xl mx-auto px-8">
+                {[1, 2].map((i) => (
                     <div key={i} className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 shadow-sm animate-pulse">
                         <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded"></div>
                     </div>
@@ -61,7 +61,7 @@ export function SummaryCards() {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-32 mb-8 max-w-9xl mx-auto px-8">
             {/* Card 1: Total CVEs */}
             <SummaryCard
                 title="Total CVEs"
@@ -83,14 +83,14 @@ export function SummaryCards() {
             />
 
             {/* Card 3: Total Topics */}
-            <SummaryCard
-                title="Total Topics"
-                value={data.totalTopics}
-                icon={<MessageCircle className="h-12 w-12 text-blue-500" />}
-                trend="up"
-                trendValue="+24%"
-                description="Trending security discussions"
-            />
+            {/*<SummaryCard*/}
+            {/*    title="Total Topics"*/}
+            {/*    value={data.totalTopics}*/}
+            {/*    icon={<MessageCircle className="h-12 w-12 text-blue-500" />}*/}
+            {/*    trend="up"*/}
+            {/*    trendValue="+24%"*/}
+            {/*    description="Trending security discussions"*/}
+            {/*/>*/}
         </div>
     )
 }
