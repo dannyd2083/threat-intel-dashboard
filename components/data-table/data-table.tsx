@@ -42,6 +42,9 @@ const getTypeColor = (type: string) => {
 export function DataTable({ data, loading = false, page, totalPages, totalCount, onPageChange }: DataTableProps) {
     const [selectedRow, setSelectedRow] = useState<string | null>(null)
 
+    // Determine if we're showing phishing data
+    const isPhishingData = data.length > 0 && data[0].type === "Phishing"
+
     return (
         <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col">
             {/* Header */}
@@ -83,21 +86,40 @@ export function DataTable({ data, loading = false, page, totalPages, totalCount,
                                 <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
                                     ID
                                 </th>
-                                <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
-                                    Type
-                                </th>
-                                <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
-                                    Title
-                                </th>
-                                <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
-                                    Severity
-                                </th>
-                                <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
-                                    Vendor/Target
-                                </th>
-                                <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
-                                    Date
-                                </th>
+                                {isPhishingData ? (
+                                    <>
+                                        <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
+                                            Domain/URL
+                                        </th>
+                                        <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
+                                            Status
+                                        </th>
+                                        <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
+                                            Attack Type
+                                        </th>
+                                        <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
+                                            Date
+                                        </th>
+                                    </>
+                                ) : (
+                                    <>
+                                        <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
+                                            Type
+                                        </th>
+                                        <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
+                                            Title
+                                        </th>
+                                        <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
+                                            Severity
+                                        </th>
+                                        <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
+                                            Vendor/Target
+                                        </th>
+                                        <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider pb-3">
+                                            Date
+                                        </th>
+                                    </>
+                                )}
                             </tr>
                             </thead>
                             <tbody>
@@ -112,25 +134,50 @@ export function DataTable({ data, loading = false, page, totalPages, totalCount,
                                     <td className="py-3 text-sm font-mono text-slate-900 dark:text-slate-100">
                                         {item.id}
                                     </td>
-                                    <td className="py-3">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>
-                                            {item.type}
-                                        </span>
-                                    </td>
-                                    <td className="py-3 text-sm text-slate-700 dark:text-slate-300 max-w-xs truncate">
-                                        {item.title}
-                                    </td>
-                                    <td className="py-3">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(item.severity)}`}>
-                                            {item.severity}
-                                        </span>
-                                    </td>
-                                    <td className="py-3 text-sm text-slate-500 dark:text-slate-400">
-                                        {item.vendor || item.target || 'N/A'}
-                                    </td>
-                                    <td className="py-3 text-sm text-slate-500 dark:text-slate-400">
-                                        {new Date(item.date).toLocaleDateString()}
-                                    </td>
+                                    {isPhishingData ? (
+                                        <>
+                                            <td className="py-3 text-sm text-slate-700 dark:text-slate-300 max-w-xs truncate">
+                                                {item.domain || item.url || item.title}
+                                            </td>
+                                            <td className="py-3">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                    item.status?.toLowerCase() === 'active'
+                                                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                                        : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                                }`}>
+                                                    {item.status || 'Unknown'}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 text-sm text-slate-700 dark:text-slate-300">
+                                                {item.target || 'N/A'}
+                                            </td>
+                                            <td className="py-3 text-sm text-slate-500 dark:text-slate-400">
+                                                {new Date(item.date).toLocaleDateString()}
+                                            </td>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <td className="py-3">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>
+                                                    {item.type}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 text-sm text-slate-700 dark:text-slate-300 max-w-xs truncate">
+                                                {item.title}
+                                            </td>
+                                            <td className="py-3">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(item.severity)}`}>
+                                                    {item.severity}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 text-sm text-slate-500 dark:text-slate-400">
+                                                {item.vendor || item.target || 'N/A'}
+                                            </td>
+                                            <td className="py-3 text-sm text-slate-500 dark:text-slate-400">
+                                                {new Date(item.date).toLocaleDateString()}
+                                            </td>
+                                        </>
+                                    )}
                                 </tr>
                             ))}
                             </tbody>
