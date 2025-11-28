@@ -1,0 +1,334 @@
+{
+  "name": "Phishing Data Collection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "af9967dd-5e25-42e9-9477-587076542011",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://urlhaus-api.abuse.ch/v1/urls/recent/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Auth-Key",
+              "value": "ea3a3c19ff144c33e7bd096bdfd0004ffb11f82735822892"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "6821ace0-ce71-4eaf-8f63-32edd2d9c27d",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = [];\n\n\nconst response = $input.all()[0].json;\n\n\nif (response.query_status !== 'ok') {\n  console.log('URLhaus API error:', response);\n  return [];\n}\n\n\nconst urls = response.urls || [];\nfor (let i = 0; i < Math.min(urls.length, 50); i++) {\n  const urlData = urls[i];\n  \n\n  if (urlData.url_status !== 'online') continue;\n  \n\n  let domain = urlData.host || '';\n  if (!domain) continue;\n  \n\n  let target = 'Unknown';\n  const urlLower = (urlData.url || '').toLowerCase();\n  const threat = (urlData.threat || '').toLowerCase();\n  const tags = (urlData.tags || []).join(' ').toLowerCase();\n  \n\n  if (tags.includes('phishing')) {\n    target = 'Phishing';\n  } else if (threat.includes('malware')) {\n    target = 'Malware';\n  } else if (tags.includes('emotet') || tags.includes('trojan')) {\n    target = 'Malware';\n  } else if (urlLower.includes('paypal')) {\n    target = 'PayPal';\n  } else if (urlLower.includes('bank')) {\n    target = 'Banking';\n  } else if (tags.includes('exe') || tags.includes('dll') || tags.includes('zip')) {\n    target = 'Malware Distribution';\n  } else if (threat) {\n    target = threat;\n  }\n  \n\n  let reportedDate = urlData.date_added;\n  if (reportedDate) {\n    // URLhaus 格式: \"2025-11-18 22:48:06 UTC\"\n    reportedDate = reportedDate.replace(' UTC', 'Z').replace(' ', 'T');\n  }\n  \n  items.push({\n    json: {\n      domain: domain,\n      url: (urlData.url || '').substring(0, 500),\n      source: 'URLhaus',\n      status: urlData.url_status || 'unknown',\n      reported_date: reportedDate,\n      verified: true,\n      target: target\n    }\n  });\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "45b0c216-b4d2-4721-898d-c3dead63d6c0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "phishing_domains",
+          "mode": "list",
+          "cachedResultName": "phishing_domains"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "verified": "={{ $json.verified }}",
+            "domain": "={{ $json.domain }}",
+            "url": "={{ $json.url }}",
+            "source": "={{ $json.source }}",
+            "status": "={{ $json.status }}",
+            "reported_date": "={{ $json.reported_date }}",
+            "target": "={{ $json.target }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reported_date",
+              "displayName": "reported_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "verified",
+              "displayName": "verified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "target",
+              "displayName": "target",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "skipOnConflict": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1232,
+        -16
+      ],
+      "id": "5696317e-a4ad-45bc-99e3-d20e4525ac2b",
+      "name": "Insert rows in a table"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        160
+      ],
+      "id": "75d05928-a897-48d1-ad6e-91098c8cc524",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\nitems = items.filter(i => i.json.status === 'online');\nitems = items.filter(i => i.json.verified === true);\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -144
+      ],
+      "id": "22010939-d401-4a38-911c-2f46f4ace2d9",
+      "name": "Baseline"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\n// Online + verified (same as A)\nitems = items.filter(i => i.json.status === 'online');\nitems = items.filter(i => i.json.verified === true);\n\n// Basic quality constraints\nitems = items.filter(i => (i.json.domain || '').trim() !== '');\nitems = items.filter(i => (i.json.url || '').trim() !== '');\nitems = items.filter(i => /^(https?:\\/\\/)/i.test(i.json.url || ''));\nitems = items.filter(i => (i.json.reported_date || '').trim() !== '');\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        0
+      ],
+      "id": "f848ed73-0491-49ea-af4a-d5eeec3b20a1",
+      "name": "Quality"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\n// Quality from B\nitems = items.filter(i => i.json.status === 'online');\nitems = items.filter(i => i.json.verified === true);\nitems = items.filter(i => (i.json.domain || '').trim() !== '');\nitems = items.filter(i => (i.json.url || '').trim() !== '');\nitems = items.filter(i => /^(https?:\\/\\/)/i.test(i.json.url || ''));\nitems = items.filter(i => (i.json.reported_date || '').trim() !== '');\n\n// Limit per domain\nconst maxPerDomain = 3;\nconst counts = new Map();\n\nitems = items.filter(i => {\n  const d = i.json.domain;\n  const current = counts.get(d) || 0;\n  if (current >= maxPerDomain) return false;\n  counts.set(d, current + 1);\n  return true;\n});\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        144
+      ],
+      "id": "d0ab90cb-1b83-44c8-b95f-29f3278c9a4d",
+      "name": "Quality + Limit URL/DOMAIN"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\n// Reuse your Quality filters if you want:\nitems = items.filter(i => i.json.status === 'online');\nitems = items.filter(i => i.json.verified === true);\n\n// Dedup by domain only\nconst seen = new Set();\nitems = items.filter(i => {\n  const d = i.json.domain;\n  if (!d) return false;\n  if (seen.has(d)) return false;\n  seen.add(d);\n  return true;\n});\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        304
+      ],
+      "id": "dfc54482-f7d6-43ba-ab92-58ea5d6b05e1",
+      "name": "Quality + Complete + Dedup (per URL)"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Baseline",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Quality",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Quality + Limit URL/DOMAIN",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Quality + Complete + Dedup (per URL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        []
+      ]
+    },
+    "Quality": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "42deb7a9-4fe0-46dd-974b-d8331e710e01",
+  "meta": {
+    "instanceId": "68a0e16da835581a6980baa51708142c0cb450d4cf2bd1f7df5320c65d90743c"
+  },
+  "id": "itxuNld5VWGEcGAK",
+  "tags": []
+}
