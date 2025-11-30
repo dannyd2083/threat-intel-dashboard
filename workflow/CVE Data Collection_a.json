@@ -1,0 +1,439 @@
+{
+  "name": "CVE Data Collection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        256,
+        240
+      ],
+      "id": "8280b9a4-33bf-4097-a413-5b5920b9a2c0",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://services.nvd.nist.gov/rest/json/cves/2.0",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "resultsPerPage",
+              "value": "1000"
+            },
+            {
+              "name": "pubStartDate",
+              "value": "={{ $now.minus({ days: 100 }).startOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            },
+            {
+              "name": "pubEndDate",
+              "value": "={{ $now.endOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        496,
+        -32
+      ],
+      "id": "bd10d9c6-9ac6-4754-ac75-f3135ebf9207",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (const item of $input.all()) {\n  const vulnerabilities = item.json.vulnerabilities || [];\n  \n  for (const vuln of vulnerabilities) {\n    const cve = vuln.cve;\n    let severity = 'UNKNOWN';\n    let cvssScore = null;\n    \n    if (cve.metrics?.cvssMetricV31?.[0]) {\n      const metric = cve.metrics.cvssMetricV31[0];\n      severity = metric.cvssData.baseSeverity || 'UNKNOWN';\n      cvssScore = metric.cvssData.baseScore;\n    }\n    \n    // 提取描述\n    const description = cve.descriptions?.find(d => d.lang === 'en')?.value || '';\n    \n    // 提取供应商和产品\n    let vendor = null;\n    let product = null;\n    \n    if (cve.configurations?.[0]?.nodes?.[0]?.cpeMatch?.[0]) {\n      const cpe = cve.configurations[0].nodes[0].cpeMatch[0].criteria;\n      const cpeParts = cpe.split(':');\n      if (cpeParts.length >= 5) {\n        vendor = cpeParts[3];\n        product = cpeParts[4];\n      }\n    }\n    \n    items.push({\n      json: {\n        cve_id: cve.id,\n        description: description.substring(0, 1000),\n        severity: severity,\n        cvss_score: cvssScore,\n        published_date: cve.published,\n        modified_date: cve.lastModified,\n        vendor: vendor,\n        product: product,\n        references: cve.references || []\n      }\n    });\n  }\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        -32
+      ],
+      "id": "17d81889-e80f-42d9-9a6d-99c4ce43961d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "cves"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cvss_score": "={{ $json.cvss_score }}",
+            "cve_id": "={{ $json.cve_id }}",
+            "description": "={{ $json.description }}",
+            "severity": "={{ $json.severity }}",
+            "published_date": "={{ $json.published_date }}",
+            "modified_date": "={{ $json.modified_date }}",
+            "vendor": "={{ $json.vendor }}",
+            "product": "={{ $json.vendor }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cve_id",
+              "displayName": "cve_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cvss_score",
+              "displayName": "cvss_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "published_date",
+              "displayName": "published_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "modified_date",
+              "displayName": "modified_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "vendor",
+              "displayName": "vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "product",
+              "displayName": "product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "references",
+              "displayName": "references",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "skipOnConflict": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1952,
+        -32
+      ],
+      "id": "f19d2c97-9baa-4c03-8e5f-422a4308b584",
+      "name": "Insert rows in a table"
+    },
+    {
+      "parameters": {},
+      "id": "b3920c36-439a-4d4e-b86f-adf94d8ae5c1",
+      "name": "When clicking ‘Execute workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        256,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (const item of $input.all()) {\n  const vulnerabilities = item.json.vulnerabilities || [];\n\n  for (const vuln of vulnerabilities) {\n    const cve = vuln.cve;\n    let severity = 'UNKNOWN';\n    let cvssScore = null;\n\n    if (cve.metrics?.cvssMetricV31?.[0]) {\n      const metric = cve.metrics.cvssMetricV31[0];\n      severity = metric.cvssData.baseSeverity || 'UNKNOWN';\n      cvssScore = metric.cvssData.baseScore;\n    }\n\n    const description = cve.descriptions?.find(d => d.lang === 'en')?.value || '';\n\n    let vendor = null;\n    let product = null;\n\n    if (cve.configurations?.[0]?.nodes?.[0]?.cpeMatch?.[0]) {\n      const cpe = cve.configurations[0].nodes[0].cpeMatch[0].criteria;\n      const cpeParts = cpe.split(':');\n      if (cpeParts.length >= 5) {\n        vendor = cpeParts[3];\n        product = cpeParts[4];\n      }\n    }\n\n    items.push({\n      json: {\n        cve_id: cve.id,\n        description: description.substring(0, 1000),\n        severity: severity,\n        cvss_score: cvssScore,\n        published_date: cve.published,\n        modified_date: cve.lastModified,\n        vendor: vendor,\n        product: product,\n        references: cve.references || []\n      }\n    });\n  }\n}\n\nreturn items;\n"
+      },
+      "id": "969d3da9-f214-4bdc-a92d-47ab1d2d557b",
+      "name": "Code Flatten CVEs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\nreturn items;"
+      },
+      "id": "368855a6-5de4-4018-a391-f9c85cfc34d0",
+      "name": "Branch A - Baseline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\nitems = items.filter(i => i.json.cvss_score != null);\nitems = items.filter(i => (i.json.description || \"\").length >= 80);\nitems = items.filter(i => {\n  const sev = (i.json.severity || \"\").toUpperCase();\n  return [\"MEDIUM\", \"HIGH\", \"CRITICAL\"].includes(sev);\n});\n\nreturn items;\n"
+      },
+      "id": "2ba9f382-70ed-4e07-895a-10c31c8952dd",
+      "name": "Branch B - Quality",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\nitems = items.filter(i => i.json.cvss_score != null);\nitems = items.filter(i => (i.json.description || \"\").length >= 80);\nitems = items.filter(i => {\n  const sev = (i.json.severity || \"\").toUpperCase();\n  return [\"MEDIUM\", \"HIGH\", \"CRITICAL\"].includes(sev);\n});\n\nconst riskyRegex = /(rce|remote code execution|sql injection|unauthenticated|pre-auth)/i;\nitems = items.filter(i => riskyRegex.test(i.json.description || \"\"));\n\nreturn items;\n"
+      },
+      "id": "30bc22d5-558f-4744-ad5c-636fc906c09c",
+      "name": "Branch C - Quality+Risky",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\n// Quality: must have CVSS score\nitems = items.filter(i => i.json.cvss_score != null);\n\n// Quality: description length ≥ 80\nitems = items.filter(i => (i.json.description || \"\").length >= 80);\n\n// Quality: severity in allowed list\nitems = items.filter(i => {\n  const sev = (i.json.severity || \"\").toUpperCase();\n  return [\"MEDIUM\", \"HIGH\", \"CRITICAL\"].includes(sev);\n});\n\n// Risky keyword match\nconst riskyRegex = /(rce|remote code execution|sql injection|unauthenticated|pre-auth)/i;\nitems = items.filter(i => riskyRegex.test(i.json.description || \"\"));\n\n// COMPLETE: require ALL fields to be present and non-null/non-empty\nitems = items.filter(i => {\n  const j = i.json;\n  return (\n    j.cve_id &&\n    j.description &&\n    j.severity &&\n    j.cvss_score != null &&\n    j.published_date &&\n    j.modified_date &&\n    j.vendor &&\n    j.product &&\n    j.references && Array.isArray(j.references)\n  );\n});\n\nreturn items;\n"
+      },
+      "id": "8e038b22-3363-46b9-8bd2-88cf6949cda0",
+      "name": "Branch D - Quality+Risky+Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://services.nvd.nist.gov/rest/json/cves/2.0",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "resultsPerPage",
+              "value": "1000"
+            },
+            {
+              "name": "pubStartDate",
+              "value": "={{ $now.minus({ days: 100 }).startOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            },
+            {
+              "name": "pubEndDate",
+              "value": "={{ $now.endOf('day').toFormat(\"yyyy-MM-dd'T'HH:mm:ss.SSS\") }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e77ecd34-7598-48dd-bea0-8ea3f46ad9f5",
+      "name": "HTTP Request1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        464,
+        240
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        []
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Flatten CVEs": {
+      "main": [
+        [
+          {
+            "node": "Branch A - Baseline",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Branch B - Quality",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Branch C - Quality+Risky",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Branch D - Quality+Risky+Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch A - Baseline": {
+      "main": [
+        []
+      ]
+    },
+    "Branch B - Quality": {
+      "main": [
+        []
+      ]
+    },
+    "Branch C - Quality+Risky": {
+      "main": [
+        []
+      ]
+    },
+    "Branch D - Quality+Risky+Complete": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code Flatten CVEs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0e0d5144-9939-4986-9194-b5b4081f8819",
+  "meta": {
+    "instanceId": "68a0e16da835581a6980baa51708142c0cb450d4cf2bd1f7df5320c65d90743c"
+  },
+  "id": "hRJNqROWO0N7IbZG",
+  "tags": []
+}

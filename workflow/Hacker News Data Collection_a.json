@@ -1,0 +1,330 @@
+{
+  "name": "Hacker News Data Collection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ce3cc5fb-cdb8-4282-b0a5-b86337403461",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://hn.algolia.com/api/v1/search_by_date",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "security"
+            },
+            {
+              "name": "tags",
+              "value": "story"
+            },
+            {
+              "name": "hitsPerPage",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "430fe909-2e69-4b99-b78e-17588d4dbab0",
+      "name": "Fetch HN Stories"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform Hacker News API response to database format\nconst items = [];\n\n// Get the response from previous node\nconst inputData = $input.all()[0].json;\n\n// Debug: log the structure\nconsole.log('Input data keys:', Object.keys(inputData));\n\n// Check if hits exist\nif (!inputData.hits) {\n  console.log('No hits found in response');\n  return [];\n}\n\nconst stories = inputData.hits;\nconsole.log(`Found ${stories.length} stories to process`);\n\n// Calculate cutoff timestamp (30 days ago)\nconst cutoffTime = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);\nconsole.log(`Filtering stories newer than ${new Date(cutoffTime * 1000).toISOString()}`);\n\nlet filteredCount = 0;\n\n// Process each story\nfor (let i = 0; i < stories.length; i++) {\n  const story = stories[i];\n  \n  // Skip if missing required fields\n  if (!story.objectID || !story.title) {\n    console.log(`Skipping story ${i}: missing objectID or title`);\n    continue;\n  }\n  \n  // Filter out stories older than 30 days\n  if (story.created_at_i && story.created_at_i < cutoffTime) {\n    continue;\n  }\n  \n  filteredCount++;\n  \n  // Convert Unix timestamp to ISO string\n  let createdAt = null;\n  if (story.created_at_i) {\n    createdAt = new Date(story.created_at_i * 1000).toISOString();\n  } else if (story.created_at) {\n    createdAt = new Date(story.created_at).toISOString();\n  } else {\n    createdAt = new Date().toISOString(); // fallback to now\n  }\n  \n  // Create output item\n  items.push({\n    json: {\n      hn_id: String(story.objectID),\n      title: String(story.title).substring(0, 500),\n      url: story.url || null,\n      author: story.author || 'unknown',\n      points: parseInt(story.points) || 0,\n      num_comments: parseInt(story.num_comments) || 0,\n      tags: Array.isArray(story._tags) ? story._tags : [],\n      created_at_hn: createdAt\n    }\n  });\n}\n\nconsole.log(`Filtered to ${filteredCount} stories from last 30 days out of ${stories.length} total`);\nconsole.log(`Successfully processed ${items.length} Hacker News stories`);\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "df450bfd-dd9a-4987-9c1a-f37bc219abf1",
+      "name": "Transform HN Data"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "hacker_news_trends"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "hn_id": "={{ $json.hn_id }}",
+            "title": "={{ $json.title }}",
+            "url": "={{ $json.url }}",
+            "author": "={{ $json.author }}",
+            "points": "={{ $json.points }}",
+            "num_comments": "={{ $json.num_comments }}",
+            "tags": "={{ $json.tags }}",
+            "created_at_hn": "={{ $json.created_at_hn }}"
+          },
+          "matchingColumns": [
+            "hn_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "hn_id",
+              "displayName": "hn_id",
+              "required": true,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "author",
+              "displayName": "author",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "points",
+              "displayName": "points",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "num_comments",
+              "displayName": "num_comments",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tags",
+              "displayName": "tags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "array",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at_hn",
+              "displayName": "created_at_hn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fetched_at",
+              "displayName": "fetched_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ]
+        },
+        "options": {
+          "skipOnConflict": false
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "0fda3592-a68c-4c49-b158-c0f90c29f714",
+      "name": "Insert into Database"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -128
+      ],
+      "id": "aa479b81-f035-4d84-8d4f-41f541925950",
+      "name": "baseline"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\n// require URL\nitems = items.filter(i => (i.json.url || '').trim() !== '');\n\n// require title\nitems = items.filter(i => (i.json.title || '').trim() !== '');\n\n// require author\nitems = items.filter(i => (i.json.author || '').trim() !== '');\n\n// require at least some engagement\nitems = items.filter(i => {\n  const points = i.json.points ?? 0;\n  const comments = i.json.num_comments ?? 0;\n  return points >= 1 || comments >= 1;\n});\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        16
+      ],
+      "id": "5ac7234f-1983-4e0a-bed4-50cd0592256a",
+      "name": "Quality"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\n// must have URL\nitems = items.filter(i => (i.json.url || '').trim() !== '');\n\n// high engagement\nitems = items.filter(i => {\n  const points = i.json.points ?? 0;\n  const comments = i.json.num_comments ?? 0;\n  return points >= 5 || comments >= 3;\n});\n\n// recency: last 7 days\nconst cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;\n\nitems = items.filter(i => {\n  const t = new Date(i.json.created_at_hn || 0).getTime();\n  return !Number.isNaN(t) && t >= cutoffMs;\n});\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        160
+      ],
+      "id": "5dac8604-fce6-400a-805a-2464220e0d8e",
+      "name": "High Engagement"
+    },
+    {
+      "parameters": {
+        "jsCode": "let items = $input.all();\n\n// basic quality: URL / title / author / created_at_hn present\nitems = items.filter(i => (i.json.url || '').trim() !== '');\nitems = items.filter(i => (i.json.title || '').trim() !== '');\nitems = items.filter(i => (i.json.author || '').trim() !== '');\nitems = items.filter(i => (i.json.created_at_hn || '').trim() !== '');\n\n// at least some engagement\nitems = items.filter(i => {\n  const points = i.json.points ?? 0;\n  const comments = i.json.num_comments ?? 0;\n  return points >= 1 || comments >= 1;\n});\n\n// unique domain\nconst seen = new Set();\n\nitems = items.filter(i => {\n  const url = i.json.url || '';\n  const m = url.match(/^https?:\\/\\/([^/]+)/i);\n  if (!m) return false;          // drop weird URLs\n\n  const domain = m[1].toLowerCase();\n\n  if (seen.has(domain)) {\n    return false;\n  }\n\n  seen.add(domain);\n  // optional: store domain for later analysis\n  i.json.domain = domain;\n  return true;\n});\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        304
+      ],
+      "id": "7acda555-247b-4fdd-90ab-611d56070dba",
+      "name": "Quality + unique Domain"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch HN Stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch HN Stories": {
+      "main": [
+        [
+          {
+            "node": "Transform HN Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform HN Data": {
+      "main": [
+        [
+          {
+            "node": "baseline",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Quality",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "High Engagement",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Quality + unique Domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d1b7628b-9866-4f25-8d98-1b6bf117f76e",
+  "meta": {
+    "instanceId": "68a0e16da835581a6980baa51708142c0cb450d4cf2bd1f7df5320c65d90743c"
+  },
+  "id": "z9Zmqwc92bMO8sky",
+  "tags": []
+}
