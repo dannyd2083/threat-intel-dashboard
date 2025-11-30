@@ -97,8 +97,9 @@ export function TrendingTopicsCloud({ days }: TrendingTopicsCloudProps) {
     }
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
+        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-[824px] flex flex-col">
+            {/* Header - Fixed */}
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                     Trending Topics
                 </h3>
@@ -132,27 +133,30 @@ export function TrendingTopicsCloud({ days }: TrendingTopicsCloudProps) {
                 </div>
             )}
 
-            {/* Topics Cloud */}
+            {/* Topics Cloud - Only this section scrolls */}
             {!loading && !error && topics.length > 0 && (
                 <>
-                    <div className="flex-1 flex flex-wrap gap-3 items-center justify-center content-center p-4">
-                        {topics.slice(0, 20).map((topic, index) => {
-                            const fontSize = getFontSize(topic.weight)
-                            return (
-                                <button
-                                    key={index}
-                                    className={`${topic.color} font-bold hover:scale-110 transition-transform cursor-pointer`}
-                                    style={{ fontSize: `${fontSize}px` }}
-                                    title={`Weight: ${topic.weight}`}
-                                >
-                                    {topic.term}
-                                </button>
-                            )
-                        })}
+                    {/* Scrollable Topics Area */}
+                    <div className="flex-1 overflow-y-auto min-h-0 pr-2 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                        <div className="flex flex-wrap gap-3 items-center justify-center content-start p-4">
+                            {topics.slice(0, 20).map((topic, index) => {
+                                const fontSize = getFontSize(topic.weight)
+                                return (
+                                    <button
+                                        key={index}
+                                        className={`${topic.color} font-bold hover:scale-110 transition-transform cursor-pointer`}
+                                        style={{ fontSize: `${fontSize}px` }}
+                                        title={`Weight: ${topic.weight}`}
+                                    >
+                                        {topic.term}
+                                    </button>
+                                )
+                            })}
+                        </div>
                     </div>
 
-                    {/* Top 3 Topics */}
-                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                    {/* Top Security Terms - Fixed at bottom */}
+                    <div className="flex-shrink-0 mt-auto pt-4 border-t border-slate-200 dark:border-slate-800">
                         <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
                             Top Security Terms
                         </p>

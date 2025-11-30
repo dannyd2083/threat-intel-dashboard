@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat Intelligence Dashboard - Visual Abstract</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            padding: 40px;
+            color: #f1f5f9;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid #334155;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+        }
+        
+        .header .subtitle {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            margin-bottom: 24px;
+        }
+        
+        .principles {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .principle {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        /* Section styles */
+        .section {
+            margin-bottom: 32px;
+        }
+        
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #64748b;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        /* Data Sources */
+        .data-sources {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .source-card {
+            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid #10b981;
+        }
+        
+        .source-card.orange {
+            background: linear-gradient(135deg, #9a3412 0%, #c2410c 100%);
+            border-color: #f97316;
+        }
+        
+        .source-card.blue {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            border-color: #3b82f6;
+        }
+        
+        .source-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+        
+        .source-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+        
+        .source-desc {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.8);
+        }
+        
+        .source-freq {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+            margin-top: 8px;
+        }
+        
+        /* Arrow */
+        .arrow-down {
+            text-align: center;
+            font-size: 2rem;
+            color: #475569;
+            margin: 16px 0;
+        }
+        
+        /* Database */
+        .database {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 100%);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #0ea5e9;
+            margin-bottom: 24px;
+        }
+        
+        .db-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .db-icon {
+            font-size: 2rem;
+        }
+        
+        .db-name {
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+        
+        .tables {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        
+        .table-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid #0369a1;
+        }
+        
+        .table-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .table-desc {
+            font-size: 0.8rem;
+            color: #7dd3fc;
+            margin-top: 4px;
+        }
+        
+        /* Services */
+        .services {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .service-card {
+            background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #8b5cf6;
+        }
+        
+        .service-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .service-list {
+            list-style: none;
+        }
+        
+        .service-list li {
+            font-size: 0.9rem;
+            padding: 6px 0;
+            color: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .service-list li::before {
+            content: "→";
+            color: #a78bfa;
+        }
+        
+        /* RAG Flow */
+        .rag-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .rag-step {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid #7c3aed;
+        }
+        
+        .rag-step-num {
+            background: #8b5cf6;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        
+        .rag-step-text {
+            font-size: 0.9rem;
+        }
+        
+        .tags-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            background: #22c55e;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .tag.orange {
+            background: #f97316;
+        }
+        
+        /* Frontend */
+        .frontend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .frontend-card {
+            background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #4b5563;
+        }
+        
+        .frontend-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .feature {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .feature-icon {
+            font-size: 1rem;
+        }
+        
+        /* User */
+        .user-section {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            border-radius: 16px;
+            border: 1px solid #374151;
+        }
+        
+        .user-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+        
+        .user-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+        
+        .user-desc {
+            font-size: 0.9rem;
+            color: #9ca3af;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #334155;
+        }
+        
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .tech {
+            background: #1e293b;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            border: 1px solid #334155;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🛡️ Threat Intelligence Dashboard</h1>
+            <p class="subtitle">AI-Powered Cybersecurity Threat Analysis Platform</p>
+            <div class="principles">
+                <div class="principle">🧑‍💻 Human-Centered AI</div>
+                <div class="principle">📊 Data-Centric AI</div>
+            </div>
+        </div>
+        
+        <!-- Data Sources -->
+        <div class="section">
+            <div class="section-title">📥 Automated Data Collection (n8n Workflows)</div>
+            <div class="data-sources">
+                <div class="source-card">
+                    <div class="source-icon">🛡️</div>
+                    <div class="source-name">NVD API</div>
+                    <div class="source-desc">CVE Vulnerabilities</div>
+                    <div class="source-freq">Every 6 hours</div>
+                </div>
+                <div class="source-card orange">
+                    <div class="source-icon">🎣</div>
+                    <div class="source-name">URLhaus API</div>
+                    <div class="source-desc">Phishing Domains</div>
+                    <div class="source-freq">Every 3 hours</div>
+                </div>
+                <div class="source-card blue">
+                    <div class="source-icon">📰</div>
+                    <div class="source-name">Hacker News</div>
+                    <div class="source-desc">Security Trends</div>
+                    <div class="source-freq">Every 6 hours</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="arrow-down">⬇️</div>
+        
+        <!-- Database -->
+        <div class="section">
+            <div class="database">
+                <div class="db-header">
+                    <span class="db-icon">🗄️</span>
+                    <span class="db-name">PostgreSQL Database</span>
+                </div>
+                <div class="tables">
+                    <div class="table-card">
+                        <div class="table-name">CVEs Table</div>
+                        <div class="table-desc">ID, Severity, CVSS, Vendor</div>
+                    </div>
+                    <div class="table-card">
+                        <div class="table-name">Phishing Table</div>
+                        <div class="table-desc">Domain, URL, Status, Target</div>
+                    </div>
+                    <div class="table-card">
+                        <div class="table-name">HN Trends Table</div>
+                        <div class="table-desc">Title, Points, Comments</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="arrow-down">⬇️</div>
+        
+        <!-- Services -->
+        <div class="section">
+            <div class="section-title">⚙️ Backend Services</div>
+            <div class="services">
+                <div class="service-card">
+                    <div class="service-title">📡 REST APIs</div>
+                    <ul class="service-list">
+                        <li>/api/stats</li>
+                        <li>/api/cves</li>
+                        <li>/api/phishing</li>
+                        <li>/api/trending</li>
+                        <li>/api/threats</li>
+                    </ul>
+                </div>
+                <div class="service-card">
+                    <div class="service-title">🤖 RAG + GPT-4 Pipeline</div>
+                    <div class="rag-flow">
+                        <div class="rag-step">
+                            <span class="rag-step-num">1</span>
+                            <span class="rag-step-text">Query Intent Recognition (Statistical / Specific / Mixed)</span>
+                        </div>
+                        <div class="rag-step">
+                            <span class="rag-step-num">2</span>
+                            <span class="rag-step-text">Database Retrieval (Keywords, Time Range, Vendor)</span>
+                        </div>
+                        <div class="rag-step">
+                            <span class="rag-step-num">3</span>
+                            <span class="rag-step-text">Context-Augmented Generation with GPT-4</span>
+                        </div>
+                    </div>
+                    <div class="tags-row">
+                        <span class="tag">[DATABASE FACT]</span>
+                        <span class="tag orange">[SECURITY ANALYSIS]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="arrow-down">⬇️</div>
+        
+        <!-- Frontend -->
+        <div class="section">
+            <div class="section-title">🖥️ Frontend (Next.js)</div>
+            <div class="frontend">
+                <div class="frontend-card">
+                    <div class="frontend-title">📊 Interactive Dashboard</div>
+                    <div class="feature-grid">
+                        <div class="feature"><span class="feature-icon">📈</span> Summary Cards</div>
+                        <div class="feature"><span class="feature-icon">📉</span> CVE Trends Chart</div>
+                        <div class="feature"><span class="feature-icon">🎣</span> Phishing Chart</div>
+                        <div class="feature"><span class="feature-icon">☁️</span> Topic Word Cloud</div>
+                        <div class="feature"><span class="feature-icon">🔍</span> Multi-Filters</div>
+                        <div class="feature"><span class="feature-icon">📋</span> Data Table</div>
+                    </div>
+                </div>
+                <div class="frontend-card">
+                    <div class="frontend-title">💬 AI Chat Assistant</div>
+                    <div class="feature-grid">
+                        <div class="feature"><span class="feature-icon">🗣️</span> Natural Language</div>
+                        <div class="feature"><span class="feature-icon">🎯</span> Intent Detection</div>
+                        <div class="feature"><span class="feature-icon">✅</span> Source Attribution</div>
+                        <div class="feature"><span class="feature-icon">🚫</span> No Hallucination</div>
+                        <div class="feature"><span class="feature-icon">📊</span> Statistics Query</div>
+                        <div class="feature"><span class="feature-icon">🔎</span> CVE Lookup</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="arrow-down">⬇️</div>
+        
+        <!-- User -->
+        <div class="user-section">
+            <div class="user-icon">👤</div>
+            <div class="user-title">Target Users</div>
+            <div class="user-desc">SOC Analysts • Security Teams • Cybersecurity Researchers</div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="tech-stack">
+                <span class="tech">Next.js 14</span>
+                <span class="tech">React</span>
+                <span class="tech">TypeScript</span>
+                <span class="tech">PostgreSQL</span>
+                <span class="tech">n8n</span>
+                <span class="tech">OpenAI GPT-4</span>
+                <span class="tech">Tailwind CSS</span>
+                <span class="tech">Recharts</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
